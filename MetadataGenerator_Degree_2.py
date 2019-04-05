@@ -12,6 +12,8 @@ def load_obj(FileName):
 
 def read_metadata_as_relationship():
     [p2pM, p2cM] = load_obj('MetaData/as_relation/as_relation_matrix.networkx')
+    if '4837' in p2pM[20180601]['4134']:
+        print 'intra p2p relation founded in china'
     return [p2pM, p2cM]
 
 def calculateListOfAsnInCountry (asnDirtyList):
@@ -78,7 +80,7 @@ class AsnData:
         self.asnNumbers = set(self.asn_country_mapping.keys())
 
     def feed_asn_relations(self,relations):
-        self.asn_to_asn_relations = set([(source,target,self.asn_country_mapping[source] if source in self.asnNumbers else None,self.asn_country_mapping[target] if target in self.asnNumbers else None) for source in relations for target in source])
+        self.asn_to_asn_relations = set([(source,target,self.asn_country_mapping[source] if source in self.asnNumbers else None,self.asn_country_mapping[target] if target in self.asnNumbers else None) for source in relations for target in relations[source]])
 
     def _get_intra_country_relations(self):
         result = {c:[x for x in self.asn_to_asn_relations if x[2]==c and x[3]==c] for c in set(self.asn_country_mapping.values())}
@@ -106,6 +108,8 @@ for date in dates:
     asnGraph = AsnData()
     asnGraph.feed_country_to_asn_mapping(country_asn_mapping)
     asnGraph.feed_asn_relations(p2pForDate)
+
+
     p2pIntraData[date]=asnGraph.get_intra_country_degree()
     p2pInterData[date]=asnGraph.get_inter_country_degree()
     print(date)
