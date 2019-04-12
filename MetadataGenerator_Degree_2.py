@@ -1,6 +1,7 @@
 import os
 import pickle
 import matplotlib.pyplot as plt
+import operator
 
 SamplingYears = [2006, 2009, 2012, 2015, 2018];
 selectedMonths = [6];
@@ -30,7 +31,7 @@ def calculate_country_to_asn_matrix():
             for year in ASN.keys():
                 for month in ASN[year].keys():
                     for day in ASN[year][month].keys():
-                        date = year * 10000 + month * 100 + day
+                        date = 20090601#year * 10000 + month * 100 + day
                         if(date not in countryToAsnMatrix.keys()):
                             countryToAsnMatrix[date] = {}
                         # print str(year)+'/'+str(month)+"/"+str(day)
@@ -51,23 +52,6 @@ def calculate_country_to_asn_matrix():
                                 print e
     # print len(countryToAsnMatrix.keys())
     return countryToAsnMatrix
-
-def plot(list,name):
-    years = sorted(list.keys())
-    sortedCountryNames = sorted(set([c for year in list.keys() for c in list[year].keys()]))
-    data = {y:[(c,list[y][c] if c in list[y].keys() else 0) for c in sortedCountryNames] for y in years}
-    eachYearData = {y:[data[y][i][1] for i in range(len(sortedCountryNames))] for y in years}
-
-    width = 0.5
-    fig,ax=plt.subplots()
-    fig.set_size_inches(100.14, 100.14)
-    [ax.bar([j+i*(width/len(years)) for j in range(len(sortedCountryNames))],eachYearData[years[i]],width/len(years),label=str(years[i])) for i in range(len(years))]
-    ax.set_ylabel('degree')
-    ax.set_title(name)
-    ax.set_xticks([i for i in range(len(sortedCountryNames))])
-    ax.set_xticklabels(sortedCountryNames)
-    ax.legend()
-    fig.savefig('plots/degree/'+name+".pdf", bbox_inches='tight')
 
 class AsnData:
     def __init__(self):
@@ -96,38 +80,128 @@ class AsnData:
     def get_intra_country_degree(self):
         return {singleCountryRelations[0]:len([relation for relation in singleCountryRelations[1] if relation[0]<relation[1] or (relation[1],relation[0]) not in singleCountryRelations[1]]) for singleCountryRelations in self._get_intra_country_relations().items()}
 
-dates=calculate_country_to_asn_matrix().keys()
-(p2p,p2c) = read_metadata_as_relationship()
-country_asn_mapping_accross_years = calculate_country_to_asn_matrix()
-print('reading done')
-p2pIntraData = {}
-p2pInterData = {}
-for date in dates:
-    p2pForDate = p2p[date]
-    country_asn_mapping = country_asn_mapping_accross_years[date]
-    asnGraph = AsnData()
-    asnGraph.feed_country_to_asn_mapping(country_asn_mapping)
-    asnGraph.feed_asn_relations(p2pForDate)
+def each_year_data_country_degrees(listOfSplittedData):
+
+    years = sorted(listOfSplittedData.keys())
+
+    print "listOfSplittedData[y]: "+str(listOfSplittedData[20090601])
+    new_list_sorted_by_degree = {y: sorted(listOfSplittedData[y], key=operator.itemgetter(1)) for y in years}
+    country_names_sorted_by_degree = [new_list_sorted_by_degree[y][i][0] for y in years for i in range(len(new_list_sorted_by_degree[y]))]
+    #data_country_degrees = {y: [(c, listOfSplittedData[y][c] if c in listOfSplittedData[y].keys() else 0) for c in country_names_sorted_by_degree] for y in years}
+    data_country_degrees = {y: [(c, listOfSplittedData[y][1] for tupple in listOfSplittedData[y] if c in tupple[0] else 0) for c in country_names_sorted_by_degree] for y in years}
+
+    #    data_country_degrees = {y: [(c, listOfSplittedData[y][1] for tupple in listOfSplittedData[y] if
+    #                                c in tupple[0] else 0) for c in country_names_sorted_by_degree] for y in years}
+
+    each_year_data_country_degrees = {y: [data_country_degrees[y][i][1] for i in range(len(country_names_sorted_by_degree))] for y in years}
+    return each_year_data_country_degrees
+
+def sortedCountryNameListByDegree (listOfSplittedData):
+    years = sorted(listOfSplittedData.keys())
+
+    newListSortedByDegree = {y: sorted(listOfSplittedData[y], key=operator.itemgetter(1)) for y in years}
+    countryNamesSortedByDegree = [newListSortedByDegree[y][i][0] for y in years for i in range(len(newListSortedByDegree[y]))]
+    #dataCountryDegrees = {y: [(c, list[y][c] if c in list[y].keys() else 0) for c in countryNamesSortedByDegree for y in years]}
+    #eachYearDataCountryDegrees = {y: [dataCountryDegrees[y][i][1] for i in range(len(countryNamesSortedByDegree))] for y in years}
+
+    return countryNamesSortedByDegree
+
+def sortedListByDegree (list):
+    years = sorted(list.keys())
+
+    new_list_sorted_by_degree = {y: sorted(list[y].items(), key=operator.itemgetter(1)) for y in years}
+    country_names_sorted_by_degree = [new_list_sorted_by_degree[y][i][0] for y in years for i in range(len(new_list_sorted_by_degree[y]))]
+    data_country_degrees = {y: [(c, list[y][c] if c in list[y].keys() else 0) for c in country_names_sorted_by_degree] for y in years}
+    #each_year_data_country_degrees = {y: [data_country_degrees[y][i][1] for i in range(len(country_names_sorted_by_degree))] for y in years}
+    return data_country_degrees
+
+def plot(listOfSplittedData,name):
+    print listOfSplittedData
+    years = sorted(listOfSplittedData.keys())
+    eachYearDataCountryDegrees = each_year_data_country_degrees(listOfSplittedData)
+    countryNamesSortedByDegree = sortedCountryNameListByDegree(listOfSplittedData)
+
+    width = 0.5
+    fig,ax=plt.subplots()
+    fig.set_size_inches(25.14, 25.14)
+    [ax.bar([j+i*(width/len(years)) for j in range(len(countryNamesSortedByDegree))],eachYearDataCountryDegrees[years[i]],width/len(years),label=str(years[i])) for i in range(len(years))]
+    ax.set_ylabel('degree')
+
+    ax.set_title(name)
+    ax.set_xticks([i for i in range(len(countryNamesSortedByDegree))])
+    ax.set_xticklabels(countryNamesSortedByDegree)
+    ax.legend()
+    fig.savefig('plots/degree/'+name+".pdf", bbox_inches='tight')
 
 
-    p2pIntraData[date]=asnGraph.get_intra_country_degree()
-    p2pInterData[date]=asnGraph.get_inter_country_degree()
-    print(date)
+def feed_p2p_data():
+    # Feed P2PData
+    p2pIntraData = {}
+    p2pInterData = {}
+    for date in dates:
+        p2pForDate = p2p[date]
+        country_asn_mapping = country_asn_mapping_accross_years[date]
+        asnGraph = AsnData()
+        asnGraph.feed_country_to_asn_mapping(country_asn_mapping)
+        asnGraph.feed_asn_relations(p2pForDate)
 
-p2cIntraData = {}
-p2cInterData = {}
-for date in dates:
-    p2cForDate = p2c[date]
-    country_asn_mapping = country_asn_mapping_accross_years[date]
-    asnGraph = AsnData()
-    asnGraph.feed_country_to_asn_mapping(country_asn_mapping)
-    asnGraph.feed_asn_relations(p2cForDate)
+        p2pIntraData[date] = asnGraph.get_intra_country_degree()
+        # print "p2pInterData: "+str(p2pInterData)
+        p2pInterData[date] = asnGraph.get_inter_country_degree()
+        print(date)
 
-    p2cInterData[date] = asnGraph.get_inter_country_degree()
-    p2cIntraData[date] = asnGraph.get_intra_country_degree()
-    print(date)
+    return p2pInterData, p2pIntraData
 
-plot(p2pIntraData,'p2pCountryDegreeIntra')
-plot(p2cIntraData,'p2cCountryDegreeIntra')
-plot(p2pInterData,'p2pCountryDegreeInter')
-plot(p2cInterData,'p2cCountryDegreeInter')
+
+def feed_p2c_data():
+    # Feed P2CData
+    p2cIntraData = {}
+    p2cInterData = {}
+    for date in dates:
+        p2cForDate = p2c[date]
+        country_asn_mapping = country_asn_mapping_accross_years[date]
+        asnGraph = AsnData()
+        asnGraph.feed_country_to_asn_mapping(country_asn_mapping)
+        asnGraph.feed_asn_relations(p2cForDate)
+
+        p2cInterData[date] = asnGraph.get_inter_country_degree()
+        p2cIntraData[date] = asnGraph.get_intra_country_degree()
+        print(date)
+    return p2cInterData,p2cIntraData
+
+
+def split_data_and_do_plot (sorted_list_by_degree, name_of_plot, number_of_splitted_plots):
+    i=0
+    print "listOfSplittedData(sortedListByDegree,NumberofSplittedPlots):"+ str(calculate_list_of_splitted_data(sorted_list_by_degree, number_of_splitted_plots))
+    for listOfSplittedData in calculate_list_of_splitted_data(sorted_list_by_degree, number_of_splitted_plots).values():
+        i=i+1;
+        plot(listOfSplittedData, name_of_plot + str(i))
+
+
+def calculate_list_of_splitted_data(sorted_list, number_of_splitted_plots):
+    years = sorted(sorted_list.keys())
+    return {splitedCountLoop:{y: [sorted_list[y][i] for i in range(len(sorted_list[y])/number_of_splitted_plots*splitedCountLoop, (len(sorted_list[y])/number_of_splitted_plots)*(splitedCountLoop+1))]}  for splitedCountLoop in range(number_of_splitted_plots) for y in years}
+
+
+def plot_all_figures(number_of_splitted_plots):
+    p2c_inter_data, p2c_intra_data = feed_p2c_data()
+    p2p_inter_data, p2p_intra_data = feed_p2p_data()
+    split_data_and_do_plot(sortedListByDegree(p2p_intra_data), "p2pCountryDegreeIntra_", number_of_splitted_plots)
+    split_data_and_do_plot(sortedListByDegree(p2c_intra_data), 'p2cCountryDegreeIntra_', number_of_splitted_plots)
+    split_data_and_do_plot(sortedListByDegree(p2p_inter_data), 'p2pCountryDegreeInter_', number_of_splitted_plots)
+    split_data_and_do_plot(sortedListByDegree(p2c_inter_data), 'p2cCountryDegreeInter_', number_of_splitted_plots)
+
+
+def main():
+    global dates, p2p, p2c, country_asn_mapping_accross_years
+    dates = calculate_country_to_asn_matrix().keys()
+
+    (p2p, p2c) = read_metadata_as_relationship()
+    country_asn_mapping_accross_years = calculate_country_to_asn_matrix()
+    print('reading done')
+    plot_all_figures(8)
+
+
+main()
+
+
