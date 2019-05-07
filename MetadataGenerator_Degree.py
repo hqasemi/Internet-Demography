@@ -255,7 +255,9 @@ def plot(list_of_splitted_data, name, size_inch_w, size_inch_h, save_path, ylabe
     ax.set_xticks([i for i in range(len(list_of_splitted_data[sample_year]))])
     ax.set_xticklabels(country_names)
     ax.legend()
-    fig.savefig(save_path+name+".pdf", bbox_inches='tight')
+    #fig.savefig(save_path+name+".pdf", bbox_inches='tight')
+
+    fig.savefig(save_path+name+".png", bbox_inches='tight')
     print "plot "+name+" has been save in "+save_path
 
 
